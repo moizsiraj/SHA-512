@@ -1,5 +1,7 @@
 import com.sun.security.jgss.GSSUtil;
 
+import java.math.BigInteger;
+
 public class SHA512 {
     private String message;
     private String blockReady;
@@ -93,7 +95,8 @@ public class SHA512 {
         for (int i = 0; i < 80; i++) {
             if (i < 16) {
                 words[i] = blocks[index].substring(startString, endString);
-                wordVal[i] = Long.valueOf(words[i], 2);
+                BigInteger val = new BigInteger(words[i], 2);
+                wordVal[i] = val.longValue();
                 startString = startString + 64;
                 endString = endString + 64;
             } else {
@@ -144,20 +147,22 @@ public class SHA512 {
                 bufferVal[C] = bufferVal[B];
                 bufferVal[B] = bufferVal[A];
                 bufferVal[A] = calculateA(t1, t2);
-                System.out.println("t:" + j + " " + Long.toHexString(bufferVal[0]));
-                System.out.println("t:" + j + " " + Long.toHexString(bufferVal[4]));
+                System.out.println("t:" + j + " " + Long.toHexString(bufferVal[0]) + " " + Long.toHexString(bufferVal[1]) + " " + Long.toHexString(bufferVal[2]) + " " + Long.toHexString(bufferVal[3]));
+                System.out.println("t:" + j + " " + Long.toHexString(bufferVal[4]) + " " + Long.toHexString(bufferVal[5]) + " " + Long.toHexString(bufferVal[6]) + " " + Long.toHexString(bufferVal[7]));
             }
             long[] recent = saveValues();
             System.out.println("prev\t\t\t\t\t\trecent\t\t\t\t\t\tresult");
             for (int j = 0; j < 8; j++) {
                 bufferVal[j] = prev[j] + recent[j];
-                System.out.println(Long.toHexString(prev[j]) + "\t\t" + Long.toHexString(recent[j]) + "\t\t" + Long.toHexString(bufferVal[j]));
+                System.out.println(Long.toHexString(prev[j]) + "\t+\t" + Long.toHexString(recent[j]) + "\t=\t" + Long.toHexString(bufferVal[j]));
             }
+            System.out.println();
         }
     }
 
     private String compileHash() {
         StringBuilder hash = new StringBuilder();
+        hash.append("hash: ");
         for (long buffer : bufferVal) {
             hash.append(Long.toHexString(buffer));
         }
@@ -201,11 +206,17 @@ public class SHA512 {
 
     public static void main(String[] args) {
         String bit24 = "abc";
-        String bit896 = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
-        System.out.println("Hash for 24 bit string");
+        String empty = "";
+        String bit448 = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
+        String bit896 = "abcdefghbcdefghicdefghijdefghijkefghijklfghijklmghijklmnhijklmnoijklmnopjklmnopqklmnopqrlmnopqrsmnopqrstnopqrstu";
+        System.out.println("Hash for empty string " + "\"\"");
+        SHA512 s1 = new SHA512(empty);
+        System.out.println("Hash for 24 bit string: " + bit24);
         SHA512 s0 = new SHA512(bit24);
-        System.out.println("Hash for 869 bit string");
-        SHA512 s1 = new SHA512(bit896);
+        System.out.println("Hash for 448 bit string " + bit448);
+        SHA512 s2 = new SHA512(bit448);
+        System.out.println("Hash for 896 bit string " + bit896);
+        SHA512 s3 = new SHA512(bit896);
 
     }
 }
