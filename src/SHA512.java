@@ -1,3 +1,4 @@
+import com.sun.security.jgss.GSSUtil;
 
 public class SHA512 {
     private String message;
@@ -84,7 +85,7 @@ public class SHA512 {
         }
     }
 
-    private String[] createWords(int index) {
+    private long[] createWords(int index) {
         String[] words = new String[80];
         long[] wordVal = new long[80];
         int startString = 0;
@@ -92,34 +93,33 @@ public class SHA512 {
         for (int i = 0; i < 80; i++) {
             if (i < 16) {
                 words[i] = blocks[index].substring(startString, endString);
-                wordVal[i] = Long.parseLong(words[i], 2);
+                wordVal[i] = Long.valueOf(words[i], 2);
                 startString = startString + 64;
                 endString = endString + 64;
             } else {
-                long value = sigma1512(wordVal[i - 2]) ^ wordVal[i - 7]
-                        ^ sigma0512(wordVal[i - 15]) ^ wordVal[i - 16];
-                words[i] = String.format("%64s", Long.toBinaryString(value)).replaceAll(" ", "0");
+                long value = sigma1512(wordVal[i - 2]) + wordVal[i - 7] + sigma0512(wordVal[i - 15]) + wordVal[i - 16];
+                wordVal[i] = value;
             }
         }
-        return words;
+        return wordVal;
     }
 
-    public static long rotate(long key, int shift) {
+    public long rotate(long key, int shift) {
         return (key >>> shift) | (key << (Long.SIZE - shift));
     }
 
     private long sigma0512(long word) {
         long val0 = rotate(word, 1);
         long val1 = rotate(word, 8);
-        long val2 = word >> 7;
-        return (long) ((val0 + val1 + val2) % Math.pow(2, 64));
+        long val2 = word >>> 7;
+        return val0 ^ val1 ^ val2;
     }
 
     private long sigma1512(long word) {
         long val0 = rotate(word, 19);
         long val1 = rotate(word, 61);
-        long val2 = word >> 6;
-        return (long) ((val0 + val1 + val2) % Math.pow(2, 64));
+        long val2 = word >>> 6;
+        return val0 ^ val1 ^ val2;
     }
 
     private long[] saveValues() {
@@ -129,7 +129,7 @@ public class SHA512 {
     }
 
     private void processBlocks() {
-        String[] words;
+        long[] words;
         for (int i = 0; i < blocks.length; i++) {
             words = createWords(i);
             long[] prev = saveValues();
@@ -145,10 +145,13 @@ public class SHA512 {
                 bufferVal[B] = bufferVal[A];
                 bufferVal[A] = calculateA(t1, t2);
                 System.out.println("t:" + j + " " + Long.toHexString(bufferVal[0]));
+                System.out.println("t:" + j + " " + Long.toHexString(bufferVal[4]));
             }
             long[] recent = saveValues();
-            for (int j = 0; j < bufferVal.length; j++) {
-                bufferVal[i] = (long) ((prev[i] + recent[i]) % Math.pow(2, 64));
+            System.out.println("prev\t\t\t\t\t\trecent\t\t\t\t\t\tresult");
+            for (int j = 0; j < 8; j++) {
+                bufferVal[j] = prev[j] + recent[j];
+                System.out.println(Long.toHexString(prev[j]) + "\t\t" + Long.toHexString(recent[j]) + "\t\t" + Long.toHexString(bufferVal[j]));
             }
         }
     }
@@ -162,20 +165,19 @@ public class SHA512 {
     }
 
     private long calculateA(long t1, long t2) {
-        return (long) ((t1 + t2) % Math.pow(2, 64));
+        return t1 + t2;
     }
 
     private long calculateE(long t1) {
-        return (long) ((t1 + bufferVal[D]) % Math.pow(2, 64));
+        return t1 + bufferVal[D];
     }
 
-    private long calculateT1(String word, long key) {
-        long wordVal = Long.parseLong(word, 2);
-        return (long) ((bufferVal[H] + ch() + sig1512() + wordVal + key) % Math.pow(2, 64));
+    private long calculateT1(long word, long key) {
+        return bufferVal[H] + ch() + sig1512() + word + key;
     }
 
     private long calculateT2() {
-        return (long) ((sig0512() + maj()) % Math.pow(2, 64));
+        return sig0512() + maj();
     }
 
     private long sig0512() {
@@ -198,8 +200,12 @@ public class SHA512 {
 
 
     public static void main(String[] args) {
-        String a = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
-        SHA512 s = new SHA512("abc");
+        String bit24 = "abc";
+        String bit896 = "abcdbcdecdefdefgefghfghighijhijkijkljklmklmnlmnomnopnopq";
+        System.out.println("Hash for 24 bit string");
+        SHA512 s0 = new SHA512(bit24);
+        System.out.println("Hash for 869 bit string");
+        SHA512 s1 = new SHA512(bit896);
 
     }
 }
